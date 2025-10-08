@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Highway Designer</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            margin: 0;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+
+        #palette {
+            width: 200px;
+            padding: 20px;
+            background-color: #e0e0e0;
+            border-right: 2px solid #ccc;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .palette-item-container {
+            position: relative;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        .component-palette {
+            border: 2px solid #333;
+            border-radius: 5px;
+            cursor: grab;
+        }
+
+        /* Control icon for component options */
+        .control-icon-wrapper {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            cursor: pointer;
+            font-size: 1.2em;
+            color: #555;
+            z-index: 20;
+        }
+
+        .component-options {
+            position: absolute;
+            top: 30px;
+            right: 5px;
+            background-color: white;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 5px;
+            z-index: 25;
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            min-width: 120px;
+        }
+        
+        .menu-item {
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 3px;
+            transition: background-color 0.2s ease;
+        }
+
+        .menu-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        .sub-menu {
+            display: none;
+            flex-direction: column;
+            padding-left: 10px;
+            border-left: 1px solid #ccc;
+        }
+        
+        .orientation-icon-wrapper {
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-radius: 3px;
+            padding: 2px;
+            transition: all 0.2s ease;
+        }
+
+        .orientation-icon-wrapper:hover {
+            background-color: #e6e6e6;
+        }
+
+        .orientation-icon-wrapper.selected {
+            border-color: dodgerblue;
+            background-color: #eaf6ff;
+        }
+
+        .orientation-icon-wrapper canvas {
+            display: block;
+        }
+
+        .snap-option {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+        }
+        
+        #snap-checkbox {
+            margin-right: 8px;
+        }
+
+        #diagram-canvas {
+            flex-grow: 1;
+            background-color: white;
+            position: relative;
+            border: 2px dashed #999;
+            margin: 20px;
+            overflow: hidden;
+        }
+        
+        .component-wrapper {
+            position: absolute;
+            cursor: move;
+            transform-origin: center center;
+        }
+        
+        .dropped-component {
+            border: none;
+            box-shadow: none;
+        }
+        
+        .selected-component {
+            outline: 2px dashed dodgerblue;
+            outline-offset: -2px;
+        }
+
+        .delete-control {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            width: 20px;
+            height: 20px;
+            background-color: crimson;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .rotate-control {
+            position: absolute;
+            bottom: -10px;
+            right: -10px;
+            width: 20px;
+            height: 20px;
+            background-color: #00a854;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: alias;
+            z-index: 10;
+        }
+        
+        #temp-canvas {
+            position: absolute;
+            opacity: 0.7;
+            pointer-events: none;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="palette">
+        <h3>Highway Components</h3>
+        
+        <div class="palette-item-container" id="straight-road-palette-container">
+            <canvas id="straight-road-palette" class="component-palette" draggable="true" data-component="straight-road" data-orientation="horizontal" data-lanes="2" width="150" height="50" data-unrotated-width="150" data-unrotated-height="50"></canvas>
+            <div class="control-icon-wrapper" onclick="toggleComponentOptions(this, 'straight-road')">⚙️</div>
+        </div>
+
+        <div class="palette-item-container" id="curved-road-palette-container">
+            <canvas id="curved-road-palette" class="component-palette" draggable="true" data-component="curved-road" data-orientation="0" data-lanes="2" width="150" height="150" data-unrotated-width="150" data-unrotated-height="150"></canvas>
+            <div class="control-icon-wrapper" onclick="toggleComponentOptions(this, 'curved-road')">⚙️</div>
+        </div>
+        
+        <div class="palette-item-container" id="crossroads-palette-container">
+            <canvas id="crossroads-palette" class="component-palette" draggable="true" data-component="crossroads" data-lanes="2" width="150" height="150" data-unrotated-width="150" data-unrotated-height="150"></canvas>
+            <div class="control-icon-wrapper" onclick="toggleComponentOptions(this, 'crossroads')">⚙️</div>
+        </div>
+
+        <div class="snap-option">
+            <input type="checkbox" id="snap-checkbox" checked>
+            <label for="snap-checkbox">Snap to fit</label>
+        </div>
+    </div>
+
+    <div id="diagram-canvas"></div>
+
+    <script>
+        const palette = document.getElementById('palette');
+        const canvas = document.getElementById('diagram-canvas');
+        const straightRoadPaletteCanvas = document.getElementById('straight-road-palette');
+        const curvedRoadPaletteCanvas = document.getElementById('curved-road-palette');
+        const crossroadsPaletteCanvas = document.getElementById('crossroads-palette');
+        const snapCheckbox = document.getElementById('snap-checkbox');
+        const SNAP_THRESHOLD = 15;
+        const DETENT_THRESHOLD = 10;
+        const ROAD_WIDTH_2_LANE = 50;
+        const ROAD_WIDTH_4_LANE = 100;
+        const SEGMENT_LENGTH = 150;
+
+        let draggedComponentType = null;
+        let draggedComponentOrientation = null;
+        let draggedComponentLanes = null;
+        let draggedElement = null;
+        let selectedElement = null;
+        let isDragging = false;
+        let initialLeft = 0;
+        let initialTop = 0;
+        let initialMouseX = 0;
+        let initialMouseY = 0;
+        let isRotating = false;
+        let initialAngle = 0;
+        let componentCenter = { x: 0, y: 0 };
+        
+        // Create a single temporary canvas for visual feedback
+        let tempCanvas = document.createElement('canvas');
+        tempCanvas.id = 'temp-canvas';
+        tempCanvas.style.display = 'none'; // Hide it initially
+        canvas.appendChild(tempCanvas);
+
+        function drawStraightRoad(canvasEl, orientation, lanes) {
+            const ctx = canvasEl.getContext('2d');
+            ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+            
+            const roadWidth = lanes == 4 ? ROAD_WIDTH_4_LANE : ROAD_WIDTH_2_LANE;
+            
+            let canvasWidth = canvasEl.width;
+            let canvasHeight = canvasEl.height;
+
+            if (orientation === 'horizontal') {
+                canvasWidth = SEGMENT_LENGTH;
+                canvasHeight = roadWidth;
+                canvasEl.width = canvasWidth;
+                canvasEl.height = canvasHeight;
+                ctx.fillStyle = '#444';
+                ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+                ctx.fillStyle = 'yellow';
+                ctx.fillRect(0, canvasHeight / 2 - 3, canvasWidth, 2);
+                ctx.fillRect(0, canvasHeight / 2 + 1, canvasWidth, 2);
+                
+                if (lanes == 4) {
+                    ctx.strokeStyle = 'white';
+                    ctx.setLineDash([5, 5]);
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(0, canvasHeight / 4);
+                    ctx.lineTo(canvasWidth, canvasHeight / 4);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(0, canvasHeight * 0.75);
+                    ctx.lineTo(canvasWidth, canvasHeight * 0.75);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+            } else { // vertical
+                canvasWidth = roadWidth;
+                canvasHeight = SEGMENT_LENGTH;
+                canvasEl.width = canvasWidth;
+                canvasEl.height = canvasHeight;
+                ctx.fillStyle = '#444';
+                ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+                ctx.fillStyle = 'yellow';
+                ctx.fillRect(canvasWidth / 2 - 3, 0, 2, canvasHeight);
+                ctx.fillRect(canvasWidth / 2 + 1, 0, 2, canvasHeight);
+
+                if (lanes == 4) {
+                    ctx.strokeStyle = 'white';
+                    ctx.setLineDash([5, 5]);
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(canvasWidth / 4, 0);
+                    ctx.lineTo(canvasWidth / 4, canvasHeight);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(canvasWidth * 0.75, 0);
+                    ctx.lineTo(canvasWidth * 0.75, canvasHeight);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+            }
+        }
+
+        function drawMiniRoad(canvasEl, orientation) {
+            const ctx = canvasEl.getContext('2d');
+            ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+            
+            const roadHeight = canvasEl.height;
+            const roadWidth = canvasEl.width;
+            
+            ctx.fillStyle = '#444';
+            ctx.fillRect(0, 0, roadWidth, roadHeight);
+            
+            ctx.fillStyle = 'yellow';
+            if (orientation === 'horizontal') {
+                ctx.fillRect(0, roadHeight / 2 - 1, roadWidth, 1);
+                ctx.fillRect(0, roadHeight / 2 + 2, roadWidth, 1);
+            } else { // vertical
+                ctx.fillRect(roadWidth / 2 - 1, 0, 1, roadHeight);
+                ctx.fillRect(roadWidth / 2 + 2, 0, 1, roadHeight);
+            }
+        }
+        
+        function drawCurvedRoad(canvasEl, angle = 0, lanes = 2) {
+            const ctx = canvasEl.getContext('2d');
+            const roadWidth = lanes == 4 ? ROAD_WIDTH_4_LANE : ROAD_WIDTH_2_LANE;
+            const halfRoadWidth = roadWidth / 2;
+            const yellowLineWidth = 2;
+            const centerlineOffset = 2;
+            
+            const canvasWidth = canvasEl.width;
+            const canvasHeight = canvasEl.height;
+            
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+            ctx.beginPath();
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = roadWidth;
+
+            const roadPathRadius = canvasWidth - halfRoadWidth;
+
+            var center = {'x': canvasWidth, y: canvasHeight};
+            var startAngle = Math.PI;
+            var endAngle = Math.PI * 1.5;
+
+            // Adjust center and angle based on orientation (0, 90, 180, 270)
+            if (angle === 90) {
+                center = {'x': 0, y: canvasWidth};
+                startAngle = Math.PI * 1.5;
+                endAngle = Math.PI * 2;
+            } else if (angle === 180) {
+                center = {'x': 0, y: 0};
+                startAngle = 0;
+                endAngle = Math.PI * 0.5;
+            } else if (angle === 270) {
+                center = {'x': canvasWidth, y: 0};
+                startAngle = Math.PI * 0.5;
+                endAngle = Math.PI;
+            }
+
+            // Draw road arc (The full circle here is simplified/conceptual, we only want the quadrant)
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, roadPathRadius, startAngle, endAngle);
+            ctx.stroke();
+
+            // Draw center lines
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, roadPathRadius + centerlineOffset, startAngle, endAngle);
+            ctx.strokeStyle = 'yellow';
+            ctx.lineWidth = yellowLineWidth;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, roadPathRadius - centerlineOffset, startAngle, endAngle);
+            ctx.strokeStyle = 'yellow';
+            ctx.lineWidth = yellowLineWidth;
+            ctx.stroke();
+	            
+            if (lanes == 4) {
+                const innerLaneRadius = roadPathRadius - halfRoadWidth / 2;
+                const outerLaneRadius = roadPathRadius + halfRoadWidth / 2;
+
+                ctx.setLineDash([5, 5]);
+                ctx.strokeStyle = 'white';
+                
+                // Inner dashed line
+                ctx.beginPath();
+                ctx.arc(center.x, center.y, innerLaneRadius, startAngle, endAngle);
+                ctx.lineWidth = yellowLineWidth;
+                ctx.stroke();
+
+                // Outer dashed line
+                ctx.beginPath();
+                ctx.arc(center.x, center.y, outerLaneRadius, startAngle, endAngle);
+                ctx.lineWidth = yellowLineWidth;
+                ctx.stroke();
+
+                ctx.setLineDash([]);
+            }
+            ctx.restore();
+        }
+
+        function drawMiniCurvedRoad(canvasEl, angle) {
+            const ctx = canvasEl.getContext('2d');
+            const roadWidth = 15;
+            const halfRoadWidth = roadWidth / 2;
+            const yellowLineWidth = 1;
+            const centerlineOffset = 1;
+            
+            const canvasWidth = canvasEl.width;
+            const canvasHeight = canvasEl.height;
+            const roadPathRadius = canvasWidth - halfRoadWidth;
+
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            
+            ctx.save();
+            ctx.translate(canvasWidth / 2, canvasHeight / 2);
+            ctx.rotate(angle * Math.PI / 180);
+            ctx.translate(-canvasWidth / 2, -canvasHeight / 2);
+            
+            // This drawing logic is simplified for the mini icon and assumes a center rotation around the canvas
+            // The main drawCurvedRoad function uses translation for orientation
+            // For the palette icon, this rotation visually represents the orientation
+            
+            ctx.beginPath();
+            ctx.arc(canvasWidth, canvasHeight, roadPathRadius, Math.PI, Math.PI * 1.5);
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = roadWidth;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(canvasWidth, canvasHeight, roadPathRadius + centerlineOffset, Math.PI, Math.PI * 1.5);
+            ctx.strokeStyle = 'yellow';
+            ctx.lineWidth = yellowLineWidth;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(canvasWidth, canvasHeight, roadPathRadius - centerlineOffset, Math.PI, Math.PI * 1.5);
+            ctx.strokeStyle = 'yellow';
+            ctx.lineWidth = yellowLineWidth;
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        function drawCrossroads(canvasEl, lanes = 2) {
+            const ctx = canvasEl.getContext('2d');
+            ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+            
+            const roadWidth = lanes == 4 ? ROAD_WIDTH_4_LANE : ROAD_WIDTH_2_LANE;
+            const halfRoadWidth = roadWidth / 2;
+            const canvasWidth = canvasEl.width;
+            const canvasHeight = canvasEl.height;
+
+            ctx.fillStyle = '#444';
+            ctx.fillRect(0, canvasHeight / 2 - halfRoadWidth, canvasWidth, roadWidth);
+            ctx.fillRect(canvasWidth / 2 - halfRoadWidth, 0, roadWidth, canvasHeight);
+            
+            ctx.fillStyle = 'yellow';
+            
+            ctx.fillRect(0, canvasHeight / 2 - 3, canvasWidth / 2 - halfRoadWidth, 2);
+            ctx.fillRect(canvasWidth / 2 + halfRoadWidth, canvasHeight / 2 - 3, canvasWidth / 2 - halfRoadWidth, 2);
+            ctx.fillRect(0, canvasHeight / 2 + 1, canvasWidth / 2 - halfRoadWidth, 2);
+            ctx.fillRect(canvasWidth / 2 + halfRoadWidth, canvasHeight / 2 + 1, canvasWidth / 2 - halfRoadWidth, 2);
+            
+            ctx.fillRect(canvasWidth / 2 - 3, 0, 2, canvasHeight / 2 - halfRoadWidth);
+            ctx.fillRect(canvasWidth / 2 + 1, 0, 2, canvasHeight / 2 - halfRoadWidth);
+            ctx.fillRect(canvasWidth / 2 - 3, canvasHeight / 2 + halfRoadWidth, 2, canvasHeight / 2 - halfRoadWidth);
+            ctx.fillRect(canvasWidth / 2 + 1, canvasHeight / 2 + halfRoadWidth, 2, canvasHeight / 2 - halfRoadWidth);
+
+            if (lanes == 4) {
+                ctx.strokeStyle = 'white';
+                ctx.setLineDash([5, 5]);
+                ctx.lineWidth = 2;
+                const laneOffset = halfRoadWidth / 2;
+
+                // Horizontal dashed lines
+                ctx.beginPath();
+                ctx.moveTo(0, canvasHeight / 2 - laneOffset);
+                ctx.lineTo(canvasWidth / 2 - halfRoadWidth, canvasHeight / 2 - laneOffset);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(canvasWidth / 2 + halfRoadWidth, canvasHeight / 2 - laneOffset);
+                ctx.lineTo(canvasWidth, canvasHeight / 2 - laneOffset);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(0, canvasHeight / 2 + laneOffset);
+                ctx.lineTo(canvasWidth / 2 - halfRoadWidth, canvasHeight / 2 + laneOffset);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(canvasWidth / 2 + halfRoadWidth, canvasHeight / 2 + laneOffset);
+                ctx.lineTo(canvasWidth, canvasHeight / 2 + laneOffset);
+                ctx.stroke();
+
+                // Vertical dashed lines
+                ctx.beginPath();
+                ctx.moveTo(canvasWidth / 2 - laneOffset, 0);
+                ctx.lineTo(canvasWidth / 2 - laneOffset, canvasHeight / 2 - halfRoadWidth);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(canvasWidth / 2 - laneOffset, canvasHeight / 2 + halfRoadWidth);
+                ctx.lineTo(canvasWidth / 2 - laneOffset, canvasHeight);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(canvasWidth / 2 + laneOffset, 0);
+                ctx.lineTo(canvasWidth / 2 + laneOffset, canvasHeight / 2 - halfRoadWidth);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(canvasWidth / 2 + laneOffset, canvasHeight / 2 + halfRoadWidth);
+                ctx.lineTo(canvasWidth / 2 + laneOffset, canvasHeight);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
+
+        function toggleSubMenu(menuItem, subMenuType) {
+            const parent = menuItem.parentElement;
+            const subMenus = parent.querySelectorAll('.sub-menu');
+            subMenus.forEach(menu => {
+                if (menu.classList.contains(`${subMenuType}-sub-menu`)) {
+                    menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+                } else {
+                    menu.style.display = 'none';
+                }
+            });
+        }
+
+        // Toggles the visibility of the component options dropdown
+        function toggleComponentOptions(iconWrapper, componentType) {
+            const parentContainer = iconWrapper.closest('.palette-item-container');
+            let optionsDropdown = parentContainer.querySelector('.component-options');
+
+            if (!optionsDropdown) {
+                optionsDropdown = document.createElement('div');
+                optionsDropdown.classList.add('component-options');
+                parentContainer.appendChild(optionsDropdown);
+
+                const orientationItem = document.createElement('div');
+                orientationItem.classList.add('menu-item');
+                orientationItem.textContent = 'Orientation';
+                orientationItem.onclick = (e) => {
+                    toggleSubMenu(orientationItem, 'orientation');
+                    e.stopPropagation();
+                };
+                optionsDropdown.appendChild(orientationItem);
+
+                const orientationSubMenu = document.createElement('div');
+                orientationSubMenu.classList.add('sub-menu', 'orientation-sub-menu');
+                optionsDropdown.appendChild(orientationSubMenu);
+                
+                const lanesItem = document.createElement('div');
+                lanesItem.classList.add('menu-item');
+                lanesItem.textContent = 'Lanes';
+                lanesItem.onclick = (e) => {
+                    toggleSubMenu(lanesItem, 'lanes');
+                    e.stopPropagation();
+                };
+                optionsDropdown.appendChild(lanesItem);
+
+                const lanesSubMenu = document.createElement('div');
+                lanesSubMenu.classList.add('sub-menu', 'lanes-sub-menu');
+                optionsDropdown.appendChild(lanesSubMenu);
+                
+                if (componentType === 'straight-road') {
+                    const horizWrapper = document.createElement('div');
+                    horizWrapper.classList.add('orientation-icon-wrapper');
+                    const horizCanvas = document.createElement('canvas');
+                    horizCanvas.width = 40;
+                    horizCanvas.height = 15;
+                    drawMiniRoad(horizCanvas, 'horizontal');
+                    horizWrapper.appendChild(horizCanvas);
+                    horizWrapper.onclick = (e) => {
+                        updatePaletteComponentOrientation(straightRoadPaletteCanvas, 'horizontal');
+                        e.stopPropagation();
+                    };
+                    orientationSubMenu.appendChild(horizWrapper);
+
+                    const vertWrapper = document.createElement('div');
+                    vertWrapper.classList.add('orientation-icon-wrapper');
+                    const vertCanvas = document.createElement('canvas');
+                    vertCanvas.width = 15;
+                    vertCanvas.height = 40;
+                    drawMiniRoad(vertCanvas, 'vertical');
+                    vertWrapper.appendChild(vertCanvas);
+                    vertWrapper.onclick = (e) => {
+                        updatePaletteComponentOrientation(straightRoadPaletteCanvas, 'vertical');
+                        e.stopPropagation();
+                    };
+                    orientationSubMenu.appendChild(vertWrapper);
+
+                    const laneOptions = [2, 4];
+                    laneOptions.forEach(lanes => {
+                        const laneOption = document.createElement('div');
+                        laneOption.classList.add('menu-item');
+                        laneOption.textContent = `${lanes} Lanes`;
+                        laneOption.onclick = (e) => {
+                            updatePaletteComponentLanes(straightRoadPaletteCanvas, lanes);
+                            e.stopPropagation();
+                        };
+                        lanesSubMenu.appendChild(laneOption);
+                    });
+                } else if (componentType === 'curved-road') {
+                    const angles = [0, 90, 180, 270];
+                    angles.forEach(angle => {
+                        const iconWrapper = document.createElement('div');
+                        iconWrapper.classList.add('orientation-icon-wrapper');
+                        const iconCanvas = document.createElement('canvas');
+                        iconCanvas.width = 40;
+                        iconCanvas.height = 40;
+                        drawMiniCurvedRoad(iconCanvas, angle);
+                        iconWrapper.appendChild(iconCanvas);
+                        iconWrapper.onclick = (e) => {
+                            updatePaletteComponentOrientation(curvedRoadPaletteCanvas, angle);
+                            e.stopPropagation();
+                        };
+                        orientationSubMenu.appendChild(iconWrapper);
+                    });
+                    
+                    const laneOptions = [2, 4];
+                    laneOptions.forEach(lanes => {
+                        const laneOption = document.createElement('div');
+                        laneOption.classList.add('menu-item');
+                        laneOption.textContent = `${lanes} Lanes`;
+                        laneOption.onclick = (e) => {
+                            updatePaletteComponentLanes(curvedRoadPaletteCanvas, lanes);
+                            e.stopPropagation();
+                        };
+                        lanesSubMenu.appendChild(laneOption);
+                    });
+                } else if (componentType === 'crossroads') {
+                    const laneOptions = [2, 4];
+                    laneOptions.forEach(lanes => {
+                        const laneOption = document.createElement('div');
+                        laneOption.classList.add('menu-item');
+                        laneOption.textContent = `${lanes} Lanes`;
+                        laneOption.onclick = (e) => {
+                            updatePaletteComponentLanes(crossroadsPaletteCanvas, lanes);
+                            e.stopPropagation();
+                        };
+                        lanesSubMenu.appendChild(laneOption);
+                    });
+                }
+            }
+            
+            // Set initial selections and handle visibility
+            const paletteComponent = parentContainer.querySelector('.component-palette');
+            const currentOrientation = paletteComponent.dataset.orientation;
+            const currentLanes = paletteComponent.dataset.lanes;
+            
+            const orientationIcons = optionsDropdown.querySelectorAll('.orientation-icon-wrapper');
+            orientationIcons.forEach(iconWrapper => {
+                const canvas = iconWrapper.querySelector('canvas');
+                if (canvas) {
+                    const paletteOrientation = paletteComponent.dataset.component === 'straight-road' ? currentOrientation : parseInt(currentOrientation);
+                    let iconOrientation = 'horizontal';
+                    if (canvas.width < canvas.height) {
+                        iconOrientation = 'vertical';
+                    }
+                    if (paletteComponent.dataset.component === 'straight-road') {
+                        if (iconOrientation === paletteOrientation) {
+                            iconWrapper.classList.add('selected');
+                        } else {
+                            iconWrapper.classList.remove('selected');
+                        }
+                    } else if (paletteComponent.dataset.component === 'curved-road') {
+                         const angles = [0, 90, 180, 270];
+                         const iconAngle = angles[Array.from(iconWrapper.parentElement.children).indexOf(iconWrapper)];
+                         if (iconAngle == paletteOrientation) {
+                            iconWrapper.classList.add('selected');
+                         } else {
+                            iconWrapper.classList.remove('selected');
+                         }
+                    }
+                }
+            });
+
+            const laneOptions = optionsDropdown.querySelectorAll('.lanes-sub-menu .menu-item');
+            laneOptions.forEach(laneOption => {
+                laneOption.classList.remove('selected');
+                const lanes = parseInt(laneOption.textContent.split(' ')[0]);
+                if (lanes == currentLanes) {
+                    laneOption.classList.add('selected');
+                }
+            });
+
+            optionsDropdown.style.display = optionsDropdown.style.display === 'flex' ? 'none' : 'flex';
+
+            document.querySelectorAll('.component-options').forEach(dropdown => {
+                if (dropdown !== optionsDropdown) {
+                    dropdown.style.display = 'none';
+                    dropdown.querySelectorAll('.sub-menu').forEach(sub => sub.style.display = 'none');
+                }
+            });
+            event.stopPropagation();
+        }
+
+        // Updates the palette component's orientation and redraws it
+        function updatePaletteComponentOrientation(canvasEl, orientation) {
+            canvasEl.dataset.orientation = orientation;
+            const parentContainer = canvasEl.closest('.palette-item-container');
+            const optionsDropdown = parentContainer.querySelector('.component-options');
+            const currentLanes = parseInt(canvasEl.dataset.lanes);
+            const roadWidth = currentLanes === 4 ? ROAD_WIDTH_4_LANE : ROAD_WIDTH_2_LANE;
+
+            if (canvasEl.dataset.component === 'straight-road') {
+                if (orientation === 'horizontal') {
+                    canvasEl.width = SEGMENT_LENGTH;
+                    canvasEl.height = roadWidth;
+                    canvasEl.dataset.unrotatedWidth = SEGMENT_LENGTH;
+                    canvasEl.dataset.unrotatedHeight = roadWidth;
+                } else {
+                    canvasEl.width = roadWidth;
+                    canvasEl.height = SEGMENT_LENGTH;
+                    canvasEl.dataset.unrotatedWidth = roadWidth;
+                    canvasEl.dataset.unrotatedHeight = SEGMENT_LENGTH;
+                }
+                drawStraightRoad(canvasEl, orientation, currentLanes);
+
+                if (optionsDropdown) {
+                    const iconWrappers = optionsDropdown.querySelectorAll('.orientation-icon-wrapper');
+                    iconWrappers.forEach(iconWrapper => iconWrapper.classList.remove('selected'));
+                    if (orientation === 'horizontal') {
+                        iconWrappers[0].classList.add('selected');
+                    } else {
+                        iconWrappers[1].classList.add('selected');
+                    }
+                }
+            } else if (canvasEl.dataset.component === 'curved-road') {
+                canvasEl.dataset.unrotatedWidth = SEGMENT_LENGTH;
+                canvasEl.dataset.unrotatedHeight = SEGMENT_LENGTH;
+                drawCurvedRoad(canvasEl, orientation, currentLanes);
+
+                if (optionsDropdown) {
+                    const iconWrappers = optionsDropdown.querySelectorAll('.orientation-icon-wrapper');
+                    iconWrappers.forEach(iconWrapper => iconWrapper.classList.remove('selected'));
+                    const angles = [0, 90, 180, 270];
+                    const selectedIndex = angles.indexOf(orientation);
+                    if (selectedIndex !== -1) {
+                        iconWrappers[selectedIndex].classList.add('selected');
+                    }
+                }
+            }
+
+            if (optionsDropdown) {
+                optionsDropdown.style.display = 'none';
+                optionsDropdown.querySelectorAll('.sub-menu').forEach(sub => sub.style.display = 'none');
+            }
+        }
+        
+        // New function to update the number of lanes
+        function updatePaletteComponentLanes(canvasEl, lanes) {
+            canvasEl.dataset.lanes = lanes;
+            const parentContainer = canvasEl.closest('.palette-item-container');
+            const optionsDropdown = parentContainer.querySelector('.component-options');
+            const currentOrientation = canvasEl.dataset.orientation;
+            const roadWidth = lanes == 4 ? ROAD_WIDTH_4_LANE : ROAD_WIDTH_2_LANE;
+
+            if (canvasEl.dataset.component === 'straight-road') {
+                if (currentOrientation === 'horizontal') {
+                    canvasEl.height = roadWidth;
+                    canvasEl.dataset.unrotatedHeight = roadWidth;
+                } else {
+                    canvasEl.width = roadWidth;
+                    canvasEl.dataset.unrotatedWidth = roadWidth;
+                }
+                drawStraightRoad(canvasEl, currentOrientation, lanes);
+            } else if (canvasEl.dataset.component === 'curved-road') {
+                canvasEl.width = SEGMENT_LENGTH;
+                canvasEl.height = SEGMENT_LENGTH;
+                canvasEl.dataset.unrotatedWidth = SEGMENT_LENGTH;
+                canvasEl.dataset.unrotatedHeight = SEGMENT_LENGTH;
+                drawCurvedRoad(canvasEl, parseInt(currentOrientation), lanes);
+            } else if (canvasEl.dataset.component === 'crossroads') {
+                canvasEl.width = SEGMENT_LENGTH;
+                canvasEl.height = SEGMENT_LENGTH;
+                canvasEl.dataset.unrotatedWidth = SEGMENT_LENGTH;
+                canvasEl.dataset.unrotatedHeight = SEGMENT_LENGTH;
+                drawCrossroads(canvasEl, lanes);
+            }
+            
+            const laneOptions = optionsDropdown.querySelectorAll('.lanes-sub-menu .menu-item');
+            laneOptions.forEach(option => option.classList.remove('selected'));
+            optionsDropdown.querySelector(`.lanes-sub-menu .menu-item:nth-child(${lanes === 2 ? 1 : 2})`).classList.add('selected');
+
+            if (optionsDropdown) {
+                optionsDropdown.style.display = 'none';
+                optionsDropdown.querySelectorAll('.sub-menu').forEach(sub => sub.style.display = 'none');
+            }
+        }
+
+
+        // Close dropdowns if clicked outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.component-options') && !e.target.closest('.control-icon-wrapper')) {
+                document.querySelectorAll('.component-options').forEach(dropdown => {
+                    dropdown.style.display = 'none';
+                    dropdown.querySelectorAll('.sub-menu').forEach(sub => sub.style.display = 'none');
+                });
+            }
+        });
+
+        /**
+         * Retrieves the current rotation angle from the component wrapper.
+         * Prioritizes the data-current-angle attribute.
+         */
+        function getRotationAngle(el) {
+            const dataAngle = el.getAttribute('data-current-angle');
+            if (dataAngle !== null) {
+                return parseFloat(dataAngle);
+            }
+            
+            const transform = el.style.transform;
+            const match = transform.match(/rotate\(([^deg)]+)deg\)/);
+            return match ? parseFloat(match[1]) : 0;
+        }
+
+        function getComponentSnapPoints(el) {
+            const componentCanvas = el.querySelector('.dropped-component');
+            const unrotatedWidth = parseInt(el.getAttribute('data-unrotated-width'));
+            const unrotatedHeight = parseInt(el.getAttribute('data-unrotated-height'));
+            const left = el.offsetLeft;
+            const top = el.offsetTop;
+            const angle = getRotationAngle(el);
+
+            const points = [];
+            const radians = angle * Math.PI / 180;
+            const cos = Math.cos(radians);
+            const sin = Math.sin(radians);
+            const centerX = left + unrotatedWidth / 2;
+            const centerY = top + unrotatedHeight / 2;
+
+            const componentType = componentCanvas.getAttribute('data-component');
+            const orientation = componentCanvas.getAttribute('data-orientation');
+            const lanes = parseInt(componentCanvas.getAttribute('data-lanes'));
+            
+            const roadWidth = lanes === 4 ? ROAD_WIDTH_4_LANE : ROAD_WIDTH_2_LANE;
+            
+            if (componentType === 'straight-road') {
+                if (orientation === 'horizontal' || orientation === 'vertical') {
+                    // For straight roads, the unrotated width/height reflects the road's natural state
+                    const actualWidth = orientation === 'horizontal' ? unrotatedWidth : roadWidth;
+                    const actualHeight = orientation === 'horizontal' ? roadWidth : unrotatedHeight;
+
+                    // Calculate rotated corners of the segment (or just the centers of the ends)
+                    const endPoints = [
+                        { x: centerX - actualWidth / 2, y: centerY }, // Left end center (before rotation)
+                        { x: centerX + actualWidth / 2, y: centerY }  // Right end center (before rotation)
+                    ];
+                    
+                    // Since the component-wrapper is rotated, we need to apply the rotation matrix
+                    // to the endpoints relative to the wrapper's center.
+                    endPoints.forEach(point => {
+                        const relX = point.x - centerX;
+                        const relY = point.y - centerY;
+                        const rotatedX = centerX + relX * cos - relY * sin;
+                        const rotatedY = centerY + relX * sin + relY * cos;
+                        points.push({ x: rotatedX, y: rotatedY });
+                    });
+                }
+            } else if (componentType === 'curved-road') {
+                const halfRoadWidth = roadWidth / 2;
+                // Define connection points relative to the 0-degree (bottom-right) curved component's unrotated box.
+                // The drawing function handles the initial orientation, but the wrapper is still rotated by CSS transform.
+                // Assuming SEGMENT_LENGTH x SEGMENT_LENGTH box for unrotated size.
+                
+                // Base points for a 0-degree (bottom-right) curve:
+                // 1. Bottom side center
+                // 2. Right side center
+                const basePoints = [
+                    { x: SEGMENT_LENGTH / 2, y: SEGMENT_LENGTH - halfRoadWidth },
+                    { x: SEGMENT_LENGTH - halfRoadWidth, y: SEGMENT_LENGTH / 2 }
+                ];
+
+                basePoints.forEach(point => {
+                    // Center is SEGMENT_LENGTH / 2, SEGMENT_LENGTH / 2 for curve component
+                    const compCenterX = unrotatedWidth / 2;
+                    const compCenterY = unrotatedHeight / 2;
+
+                    const relX = point.x - compCenterX;
+                    const relY = point.y - compCenterY;
+
+                    // Apply rotation matrix to the relative point
+                    const rotatedRelX = relX * cos - relY * sin;
+                    const rotatedRelY = relX * sin + relY * cos;
+
+                    // Translate back to canvas coordinates
+                    const rotatedX = centerX + rotatedRelX;
+                    const rotatedY = centerY + rotatedRelY;
+                    
+                    points.push({ x: rotatedX, y: rotatedY });
+                });
+            } else if (componentType === 'crossroads') {
+                // Crossroads points are always at the center of the road segments at the edge of the box
+                const halfWidth = unrotatedWidth / 2;
+                const halfHeight = unrotatedHeight / 2;
+                const halfRoadWidth = roadWidth / 2;
+                
+                // Base points relative to wrapper center (0, 0)
+                const basePoints = [
+                    { x: -halfWidth + halfRoadWidth, y: 0 }, // Left
+                    { x: halfWidth - halfRoadWidth, y: 0 },  // Right
+                    { x: 0, y: -halfHeight + halfRoadWidth }, // Top
+                    { x: 0, y: halfHeight - halfRoadWidth }  // Bottom
+                ];
+
+                basePoints.forEach(point => {
+                    const relX = point.x;
+                    const relY = point.y;
+                    
+                    // Apply rotation matrix
+                    const rotatedRelX = relX * cos - relY * sin;
+                    const rotatedRelY = relX * sin + relY * cos;
+
+                    // Translate back to canvas coordinates
+                    const rotatedX = centerX + rotatedRelX;
+                    const rotatedY = centerY + rotatedRelY;
+                    
+                    points.push({ x: rotatedX, y: rotatedY });
+                });
+            }
+
+            return points;
+        }
+
+
+        function snapToElements(movedEl, allElements) {
+            const movedSnapPoints = getComponentSnapPoints(movedEl);
+
+            for (const existingEl of allElements) {
+                if (movedEl === existingEl) continue;
+
+                const existingSnapPoints = getComponentSnapPoints(existingEl);
+
+                for (let i = 0; i < movedSnapPoints.length; i++) {
+                    const movedPoint = movedSnapPoints[i];
+                    
+                    for (let j = 0; j < existingSnapPoints.length; j++) {
+                        const existingPoint = existingSnapPoints[j];
+
+                        const dx = movedPoint.x - existingPoint.x;
+                        const dy = movedPoint.y - existingPoint.y;
+
+                        if (Math.abs(dx) < SNAP_THRESHOLD && Math.abs(dy) < SNAP_THRESHOLD) {
+                            movedEl.style.left = `${movedEl.offsetLeft - dx}px`;
+                            movedEl.style.top = `${movedEl.offsetTop - dy}px`;
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
+        function createDeleteControl() {
+            const deleteControl = document.createElement('div');
+            deleteControl.classList.add('delete-control');
+            deleteControl.textContent = '×';
+            return deleteControl;
+        }
+
+        function createRotateControl() {
+            const rotateControl = document.createElement('div');
+            rotateControl.classList.add('rotate-control');
+            return rotateControl;
+        }
+
+        // Initial draws
+        drawStraightRoad(straightRoadPaletteCanvas, straightRoadPaletteCanvas.dataset.orientation, 2);
+        drawCurvedRoad(curvedRoadPaletteCanvas, parseInt(curvedRoadPaletteCanvas.dataset.orientation), 2);
+        drawCrossroads(crossroadsPaletteCanvas, 2);
+        
+        canvas.addEventListener('mousedown', (e) => {
+            const clickedElement = e.target.closest('.component-wrapper');
+
+            if (e.target.classList.contains('delete-control')) {
+                const componentToDelete = e.target.parentElement;
+                if (componentToDelete) {
+                    componentToDelete.remove();
+                    selectedElement = null;
+                }
+                return;
+            }
+
+            if (e.target.classList.contains('rotate-control')) {
+                e.preventDefault();
+                isRotating = true;
+                const component = e.target.parentElement;
+                selectedElement = component;
+
+                const rect = component.getBoundingClientRect();
+                componentCenter.x = rect.left + rect.width / 2;
+                componentCenter.y = rect.top + rect.height / 2;
+
+                initialAngle = getRotationAngle(component) - Math.atan2(e.clientY - componentCenter.y, e.clientX - componentCenter.x) * (180 / Math.PI);
+                return;
+            }
+
+            if (clickedElement) {
+                isDragging = true;
+                draggedElement = clickedElement;
+                
+                initialLeft = draggedElement.offsetLeft;
+                initialTop = draggedElement.offsetTop;
+                initialMouseX = e.clientX;
+                initialMouseY = e.clientY;
+                
+                draggedElement.classList.remove('selected-component');
+                const controls = draggedElement.querySelectorAll('.delete-control, .rotate-control');
+                controls.forEach(control => control.remove());
+
+            } else {
+                if (selectedElement) {
+                    selectedElement.classList.remove('selected-component');
+                    selectedElement.querySelectorAll('.delete-control, .rotate-control').forEach(el => el.remove());
+                }
+                selectedElement = null;
+            }
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging && draggedElement) {
+                const displacementX = e.clientX - initialMouseX;
+                const displacementY = e.clientY - initialMouseY;
+                draggedElement.style.left = `${initialLeft + displacementX}px`;
+                draggedElement.style.top = `${initialTop + displacementY}px`;
+            }
+
+            if (isRotating && selectedElement) {
+                let newAngle = Math.atan2(e.clientY - componentCenter.y, e.clientX - componentCenter.x) * (180 / Math.PI) + initialAngle;
+                
+                newAngle = (newAngle + 360) % 360;
+
+                if (snapCheckbox.checked) {
+                    const detentAngles = [0, 90, 180, 270, 360];
+                    for (const angle of detentAngles) {
+                        if (Math.abs(newAngle - angle) < DETENT_THRESHOLD || Math.abs(newAngle - angle + 360) < DETENT_THRESHOLD) {
+                            newAngle = angle % 360;
+                            break;
+                        }
+                    }
+                }
+
+                selectedElement.style.transform = `rotate(${newAngle}deg)`;
+                // Update the data attribute with the final angle
+                selectedElement.setAttribute('data-current-angle', newAngle);
+            }
+        });
+
+        document.addEventListener('mouseup', (e) => {
+            if (isDragging && draggedElement) {
+                isDragging = false;
+                
+                if (snapCheckbox.checked) {
+                    const allDroppedComponents = canvas.querySelectorAll('.component-wrapper');
+                    snapToElements(draggedElement, allDroppedComponents);
+                }
+
+                selectedElement = draggedElement;
+                selectedElement.classList.add('selected-component');
+                selectedElement.appendChild(createDeleteControl());
+                selectedElement.appendChild(createRotateControl());
+                
+                draggedElement = null;
+            }
+
+            isRotating = false;
+
+            const paletteContainers = document.querySelectorAll('.palette-item-container');
+            paletteContainers.forEach(container => {
+                const controlWrapper = container.querySelector('.control-icon-wrapper');
+                if (controlWrapper) {
+                    controlWrapper.style.display = 'block';
+                }
+            });
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (selectedElement) {
+                const step = 1;
+                let currentTop = parseInt(selectedElement.style.top);
+                let currentLeft = parseInt(selectedElement.style.left);
+
+                switch(e.key) {
+                    case 'ArrowUp':
+                        selectedElement.style.top = `${currentTop - step}px`;
+                        e.preventDefault();
+                        break;
+                    case 'ArrowDown':
+                        selectedElement.style.top = `${currentTop + step}px`;
+                        e.preventDefault();
+                        break;
+                    case 'ArrowLeft':
+                        selectedElement.style.left = `${currentLeft - step}px`;
+                        e.preventDefault();
+                        break;
+                    case 'ArrowRight':
+                        selectedElement.style.left = `${currentLeft + step}px`;
+                        e.preventDefault();
+                        break;
+                }
+            }
+        });
+
+        palette.addEventListener('dragstart', (e) => {
+            const component = e.target.closest('.component-palette');
+            if (component) {
+                draggedComponentType = component.getAttribute('data-component');
+                draggedComponentOrientation = component.getAttribute('data-orientation');
+                draggedComponentLanes = component.getAttribute('data-lanes');
+                e.dataTransfer.setData('text/plain', draggedComponentType);
+                e.dataTransfer.setData('text/orientation', draggedComponentOrientation);
+                e.dataTransfer.setData('text/lanes', draggedComponentLanes);
+
+                // Use a transparent drag image so the default one doesn't show
+                const emptyImg = new Image();
+                emptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+                e.dataTransfer.setDragImage(emptyImg, 0, 0);
+
+                // Show the temporary canvas for visual feedback
+                tempCanvas.style.display = 'block';
+
+                const container = component.closest('.palette-item-container');
+                const controlWrapper = container.querySelector('.control-icon-wrapper');
+                if (controlWrapper) {
+                    controlWrapper.style.display = 'none';
+                }
+                const optionsDropdown = container.querySelector('.component-options');
+                if (optionsDropdown) {
+                    optionsDropdown.style.display = 'none';
+                }
+            }
+        });
+
+        canvas.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+            
+            if (draggedComponentType) {
+                const paletteComponent = document.querySelector(`.component-palette[data-component="${draggedComponentType}"]`);
+                const unrotatedWidth = parseInt(paletteComponent.getAttribute('data-unrotated-width'));
+                const unrotatedHeight = parseInt(paletteComponent.getAttribute('data-unrotated-height'));
+                const orientation = paletteComponent.getAttribute('data-orientation');
+                const lanes = parseInt(paletteComponent.getAttribute('data-lanes'));
+
+                let componentWidth = unrotatedWidth;
+                let componentHeight = unrotatedHeight;
+                const roadWidth = lanes === 4 ? ROAD_WIDTH_4_LANE : ROAD_WIDTH_2_LANE;
+
+                if (draggedComponentType === 'straight-road') {
+                    if (orientation === 'horizontal') {
+                        componentWidth = SEGMENT_LENGTH;
+                        componentHeight = roadWidth;
+                    } else {
+                        componentWidth = roadWidth;
+                        componentHeight = SEGMENT_LENGTH;
+                    }
+                } else if (draggedComponentType === 'curved-road') {
+                    componentWidth = componentHeight = SEGMENT_LENGTH;
+                } else if (draggedComponentType === 'crossroads') {
+                    componentWidth = componentHeight = SEGMENT_LENGTH;
+                }
+                
+                const canvasRect = canvas.getBoundingClientRect();
+                
+                tempCanvas.width = componentWidth;
+                tempCanvas.height = componentHeight;
+                tempCanvas.style.left = `${e.clientX - canvasRect.left - componentWidth / 2}px`;
+                tempCanvas.style.top = `${e.clientY - canvasRect.top - componentHeight / 2}px`;
+                
+                if (draggedComponentType === 'straight-road') {
+                    drawStraightRoad(tempCanvas, draggedComponentOrientation, lanes);
+                } else if (draggedComponentType === 'curved-road') {
+                    drawCurvedRoad(tempCanvas, parseInt(draggedComponentOrientation), lanes);
+                } else if (draggedComponentType === 'crossroads') {
+                    drawCrossroads(tempCanvas, lanes);
+                }
+            }
+        });
+
+        canvas.addEventListener('dragleave', (e) => {
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.clearRect(0, 0, tempCtx.width, tempCtx.height);
+        });
+
+        canvas.addEventListener('drop', (e) => {
+            e.preventDefault();
+            
+            tempCanvas.style.display = 'none';
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.clearRect(0, 0, tempCanvas.width, tempCtx.height);
+            
+            // --- OLD CODE (Causes error in Cypress) ---
+            // const componentType = e.dataTransfer.getData('text/plain');
+            // const orientation = e.dataTransfer.getData('text/orientation');
+            // const lanes = parseInt(e.dataTransfer.getData('text/lanes'));
+            // --- END OLD CODE ---
+
+            // --- NEW CODE ---
+            // 1. Check for data passed directly via Cypress event properties (e.componentType)
+            // 2. Fall back to standard browser dataTransfer for real drag-and-drop
+            const componentType = e.componentType || e.dataTransfer.getData('text/plain');
+            const orientation = e.orientation || e.dataTransfer.getData('text/orientation');
+            const lanes = parseInt(e.lanes || e.dataTransfer.getData('text/lanes'));
+            // --- END NEW CODE ---
+
+            if (componentType) {
+                const wrapper = document.createElement('div');
+                wrapper.classList.add('component-wrapper');
+
+                const newComponent = document.createElement('canvas');
+                newComponent.classList.add('dropped-component');
+                newComponent.setAttribute('data-component', componentType);
+                newComponent.setAttribute('data-lanes', lanes);
+                newComponent.setAttribute('data-orientation', orientation); // Keep for initial drawing logic
+
+                let componentWidth;
+                let componentHeight;
+                const roadWidth = lanes === 4 ? ROAD_WIDTH_4_LANE : ROAD_WIDTH_2_LANE;
+
+                if (componentType === 'straight-road') {
+                    if (orientation === 'horizontal') {
+                        componentWidth = SEGMENT_LENGTH;
+                        componentHeight = roadWidth;
+                    } else {
+                        componentWidth = roadWidth;
+                        componentHeight = SEGMENT_LENGTH;
+                    }
+                } else if (componentType === 'curved-road') {
+                    componentWidth = SEGMENT_LENGTH;
+                    componentHeight = SEGMENT_LENGTH;
+                } else if (componentType === 'crossroads') {
+                    componentWidth = SEGMENT_LENGTH;
+                    componentHeight = SEGMENT_LENGTH;
+                }
+                
+                newComponent.width = componentWidth;
+                newComponent.height = componentHeight;
+
+                wrapper.style.width = `${componentWidth}px`;
+                wrapper.style.height = `${componentHeight}px`;
+
+                // Set unrotated dimensions for snap points
+                wrapper.setAttribute('data-unrotated-width', componentWidth);
+                wrapper.setAttribute('data-unrotated-height', componentHeight);
+
+                const canvasRect = canvas.getBoundingClientRect();
+                wrapper.style.left = `${e.clientX - canvasRect.left - componentWidth / 2}px`;
+                wrapper.style.top = `${e.clientY - canvasRect.top - componentHeight / 2}px`;
+                
+                // --- Rotation State Initialization ---
+                let initialAngle = 0;
+                if (componentType === 'curved-road') {
+                    // Curved road drawing already adjusts for palette orientation
+                    initialAngle = parseInt(orientation);
+                }
+                wrapper.setAttribute('data-current-angle', initialAngle);
+                // --- End Rotation State Initialization ---
+
+                wrapper.appendChild(newComponent);
+                canvas.appendChild(wrapper);
+                
+                if (componentType === 'straight-road') {
+                    drawStraightRoad(newComponent, orientation, lanes);
+                } else if (componentType === 'curved-road') {
+                    drawCurvedRoad(newComponent, parseInt(orientation), lanes);
+                } else if (componentType === 'crossroads') {
+                    drawCrossroads(newComponent, lanes);
+                }
+
+                if (selectedElement) {
+                    selectedElement.classList.remove('selected-component');
+                    selectedElement.querySelectorAll('.delete-control, .rotate-control').forEach(el => el.remove());
+                }
+
+                selectedElement = wrapper;
+                selectedElement.classList.add('selected-component');
+                selectedElement.appendChild(createDeleteControl());
+                selectedElement.appendChild(createRotateControl());
+
+                if (snapCheckbox.checked) {
+                    const allDroppedComponents = canvas.querySelectorAll('.component-wrapper');
+                    snapToElements(wrapper, allDroppedComponents);
+                }
+            }
+        });
+        
+        document.addEventListener('dragend', (e) => {
+            const paletteContainers = document.querySelectorAll('.palette-item-container');
+            paletteContainers.forEach(container => {
+                const controlWrapper = container.querySelector('.control-icon-wrapper');
+                if (controlWrapper) {
+                    controlWrapper.style.display = 'block';
+                }
+            });
+            // Clear and hide the temporary canvas
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+            tempCanvas.style.display = 'none';
+        });
+    </script>
+</body>
+</html>

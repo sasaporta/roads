@@ -1,0 +1,43 @@
+# ─────────────────────────────
+# Node.js dependencies
+# ─────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ─────────────────────────────
+# Build output (optional)
+# ─────────────────────────────
+dist/
+build/
+coverage/
+tmp/
+.cache/
+
+# ─────────────────────────────
+# Cypress
+# ─────────────────────────────
+cypress/screenshots/
+cypress/videos/
+cypress/downloads/
+
+# ─────────────────────────────
+# Environment & system files
+# ─────────────────────────────
+.env
+.env.*.local
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# ─────────────────────────────
+# Optional: OS-specific files
+# ─────────────────────────────
+# macOS
+*.DS_Store
+# Windows
+desktop.ini
