@@ -194,3 +194,45 @@ describe('Highway Designer Curved Road Orientation State Persistence', () => {
         dropAndVerifyCanvas('270');
     });
 });
+
+describe('Highway Designer Crossroads Options Validation', () => {
+    beforeEach(() => {
+        cy.visit('index.html');
+        // Alias the crossroads palette component container
+        cy.get('#crossroads-palette-container').as('crossroadsPaletteContainer');
+    });
+
+    it('4. Should disable the Orientation option for the Crossroads component', () => {
+        cy.log('--- Validating Crossroads Orientation option is disabled ---');
+        
+        // 1. Click the gear icon to open the options dropdown.
+        cy.get('@crossroadsPaletteContainer')
+            .find('.control-icon-wrapper')
+            .click();
+
+        // 2. Find the component options dropdown and assert visibility.
+        cy.get('@crossroadsPaletteContainer')
+            .find('.component-options')
+            .should('be.visible')
+            .as('optionsDropdown');
+
+        // 3. Assert that the "Orientation" menu item is present and has the 'disabled' class.
+        cy.get('@optionsDropdown')
+            .contains('.menu-item', 'Orientation')
+            .should('exist')
+            // Check that the item has the 'disabled' class
+            .and('have.class', 'disabled')
+            .click({ force: true }); // Attempt to click it to ensure no unexpected action occurs
+
+        // 4. Assert that the orientation sub-menu *did not* open (it should be hidden/display: none).
+        cy.get('@optionsDropdown')
+            .find('.orientation-sub-menu')
+            // The sub-menu should exist in the DOM but must not be visible.
+            .should('not.be.visible');
+
+        // 5. Cleanup: Close the main dropdown.
+        cy.get('@crossroadsPaletteContainer')
+            .find('.control-icon-wrapper')
+            .click();
+    });
+});

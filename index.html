@@ -79,6 +79,16 @@
             background-color: #f0f0f0;
         }
 
+        .menu-item.disabled {
+            color: #aaa;
+            cursor: default;
+            background-color: transparent;
+        }
+
+        .menu-item.disabled:hover {
+            background-color: transparent; /* Override hover effect */
+        }
+
         .sub-menu {
             display: none;
             flex-direction: column;
@@ -548,10 +558,20 @@
                 const orientationItem = document.createElement('div');
                 orientationItem.classList.add('menu-item');
                 orientationItem.textContent = 'Orientation';
-                orientationItem.onclick = (e) => {
-                    toggleSubMenu(orientationItem, 'orientation');
-                    e.stopPropagation();
-                };
+                
+                if (componentType === 'crossroads') {
+                    // Disable the option for crossroads
+                    orientationItem.classList.add('disabled');
+                    orientationItem.onclick = (e) => {
+                        // Prevent any action
+                        e.stopPropagation();
+                    };
+                } else {
+                    orientationItem.onclick = (e) => {
+                        toggleSubMenu(orientationItem, 'orientation');
+                        e.stopPropagation();
+                    };
+                }
                 optionsDropdown.appendChild(orientationItem);
 
                 const orientationSubMenu = document.createElement('div');
