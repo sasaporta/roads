@@ -866,27 +866,30 @@
             const roadWidth = lanes === 4 ? ROAD_WIDTH_4_LANE : ROAD_WIDTH_2_LANE;
             
             if (componentType === 'straight-road') {
-                if (orientation === 'horizontal' || orientation === 'vertical') {
-                    // For straight roads, the unrotated width/height reflects the road's natural state
-                    const actualWidth = orientation === 'horizontal' ? unrotatedWidth : roadWidth;
-                    const actualHeight = orientation === 'horizontal' ? roadWidth : unrotatedHeight;
-
-                    // Calculate rotated corners of the segment (or just the centers of the ends)
-                    const endPoints = [
-                        { x: centerX - actualWidth / 2, y: centerY }, // Left end center (before rotation)
-                        { x: centerX + actualWidth / 2, y: centerY }  // Right end center (before rotation)
+                if (orientation === 'horizontal') {
+                    var endPoints = [
+                        { x: centerX - unrotatedWidth / 2, y: centerY },
+                        { x: centerX + unrotatedWidth / 2, y: centerY }
                     ];
-                    
-                    // Since the component-wrapper is rotated, we need to apply the rotation matrix
-                    // to the endpoints relative to the wrapper's center.
-                    endPoints.forEach(point => {
-                        const relX = point.x - centerX;
-                        const relY = point.y - centerY;
-                        const rotatedX = centerX + relX * cos - relY * sin;
-                        const rotatedY = centerY + relX * sin + relY * cos;
-                        points.push({ x: rotatedX, y: rotatedY });
-                    });
+                } else {
+                    var endPoints = [
+                        { x: centerX - roadWidth / 2, y: top },
+                        { x: centerX - roadWidth / 2, y: top + unrotatedHeight }
+                    ];
                 }
+
+                // Calculate rotated corners of the segment (or just the centers of the ends)
+                console.log(endPoints);
+                    
+                // Since the component-wrapper is rotated, we need to apply the rotation matrix
+                // to the endpoints relative to the wrapper's center.
+                endPoints.forEach(point => {
+                    const relX = point.x - centerX;
+                    const relY = point.y - centerY;
+                    const rotatedX = centerX + relX * cos - relY * sin;
+                    const rotatedY = centerY + relX * sin + relY * cos;
+                    points.push({ x: rotatedX, y: rotatedY });
+                });
             } else if (componentType === 'curved-road') {
                 const halfRoadWidth = roadWidth / 2;
                 // Define connection points relative to the 0-degree (bottom-right) curved component's unrotated box.
