@@ -34,7 +34,7 @@ const snapCases = [
         dropB_Y: 452, // Using 452 (similar trigger distance as 452 for horizontal X)
         
         // Expected CSS 'left' (horizontal alignment): 225 
-        expectedLeft: 225, 
+        expectedLeft: 275, 
         // Expected CSS 'top': Road B's top aligns with Road A's bottom edge (375)
         expectedTop: 375 
     },

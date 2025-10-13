@@ -864,23 +864,22 @@
             const lanes = parseInt(componentCanvas.getAttribute('data-lanes'));
             
             const roadWidth = lanes === 4 ? ROAD_WIDTH_4_LANE : ROAD_WIDTH_2_LANE;
+            const halfRoadWidth = roadWidth / 2;
             
             if (componentType === 'straight-road') {
                 if (orientation === 'horizontal') {
                     var endPoints = [
-                        { x: centerX - unrotatedWidth / 2, y: centerY },
-                        { x: centerX + unrotatedWidth / 2, y: centerY }
+                        { x: left, y: top + halfRoadWidth },
+                        { x: left + unrotatedWidth, y: top + halfRoadWidth }
                     ];
                 } else {
                     var endPoints = [
-                        { x: centerX - roadWidth / 2, y: top },
-                        { x: centerX - roadWidth / 2, y: top + unrotatedHeight }
+                        { x: left + halfRoadWidth, y: top },
+                        { x: left + halfRoadWidth, y: top + unrotatedHeight }
                     ];
                 }
 
                 // Calculate rotated corners of the segment (or just the centers of the ends)
-                console.log(endPoints);
-                    
                 // Since the component-wrapper is rotated, we need to apply the rotation matrix
                 // to the endpoints relative to the wrapper's center.
                 endPoints.forEach(point => {
@@ -891,37 +890,50 @@
                     points.push({ x: rotatedX, y: rotatedY });
                 });
             } else if (componentType === 'curved-road') {
-                const halfRoadWidth = roadWidth / 2;
-                // Define connection points relative to the 0-degree (bottom-right) curved component's unrotated box.
-                // The drawing function handles the initial orientation, but the wrapper is still rotated by CSS transform.
-                // Assuming SEGMENT_LENGTH x SEGMENT_LENGTH box for unrotated size.
-                
-                // Base points for a 0-degree (bottom-right) curve:
-                // 1. Bottom side center
-                // 2. Right side center
-                const basePoints = [
-                    { x: SEGMENT_LENGTH / 2, y: SEGMENT_LENGTH - halfRoadWidth },
-                    { x: SEGMENT_LENGTH - halfRoadWidth, y: SEGMENT_LENGTH / 2 }
-                ];
+                if (orientation === '0') {
+                    var endPoints = [
+                        { x: left + unrotatedWidth, y: top + halfRoadWidth },
+                        { x: left + halfRoadWidth, y: top + unrotatedHeight }
+                    ];
+                } else if (orientation === '90') {
+                    var endPoints = [
+                        { x: left, y: top + halfRoadWidth },
+                        { x: left + unrotatedWidth, y: top + unrotatedHeight }
+                    ];
+                } else if (orientation === '180') {
+                    var endPoints = [
+                        { x: left + unrotatedWidth - halfRoadWidth, y: top },
+                        { x: left, y: top + unrotatedHeight - halfRoadWidth }
+                    ];
+                } else if (orientation === '270') {
+                    var endPoints = [
+                        { x: left + halfRoadWidth, y: top },
+                        { x: left + unrotatedWidth, y: top + unrotatedHeight - halfRoadWidth }
+                    ];
+                }
 
-                basePoints.forEach(point => {
-                    // Center is SEGMENT_LENGTH / 2, SEGMENT_LENGTH / 2 for curve component
-                    const compCenterX = unrotatedWidth / 2;
-                    const compCenterY = unrotatedHeight / 2;
+                  endPoints.forEach(point => {
+                      points.push(point);
+                  });
 
-                    const relX = point.x - compCenterX;
-                    const relY = point.y - compCenterY;
-
-                    // Apply rotation matrix to the relative point
-                    const rotatedRelX = relX * cos - relY * sin;
-                    const rotatedRelY = relX * sin + relY * cos;
-
-                    // Translate back to canvas coordinates
-                    const rotatedX = centerX + rotatedRelX;
-                    const rotatedY = centerY + rotatedRelY;
-                    
-                    points.push({ x: rotatedX, y: rotatedY });
-                });
+//                endPoints.forEach(point => {
+//                    // Center is SEGMENT_LENGTH / 2, SEGMENT_LENGTH / 2 for curve component
+//                    const compCenterX = unrotatedWidth / 2;
+//                    const compCenterY = unrotatedHeight / 2;
+//
+//                    const relX = point.x - compCenterX;
+//                    const relY = point.y - compCenterY;
+//
+//                    // Apply rotation matrix to the relative point
+//                    const rotatedRelX = relX * cos - relY * sin;
+//                    const rotatedRelY = relX * sin + relY * cos;
+//
+//                    // Translate back to canvas coordinates
+//                    const rotatedX = centerX + rotatedRelX;
+//                    const rotatedY = centerY + rotatedRelY;
+//                    
+//                    points.push({ x: rotatedX, y: rotatedY });
+//                });
             } else if (componentType === 'crossroads') {
                 // Crossroads points are always at the center of the road segments at the edge of the box
                 const halfWidth = unrotatedWidth / 2;
@@ -952,17 +964,20 @@
                 });
             }
 
+            //console.log('points =', points);
             return points;
         }
 
 
         function snapToElements(movedEl, allElements) {
             const movedSnapPoints = getComponentSnapPoints(movedEl);
+            console.log('movedSnapPoints =', movedSnapPoints);
 
             for (const existingEl of allElements) {
                 if (movedEl === existingEl) continue;
 
                 const existingSnapPoints = getComponentSnapPoints(existingEl);
+                console.log('existingSnapPoints =', existingSnapPoints);
 
                 for (let i = 0; i < movedSnapPoints.length; i++) {
                     const movedPoint = movedSnapPoints[i];
@@ -971,6 +986,7 @@
                         const existingPoint = existingSnapPoints[j];
 
                         const dx = movedPoint.x - existingPoint.x;
+                        console.log(movedPoint.x, existingPoint.x);
                         const dy = movedPoint.y - existingPoint.y;
 
                         if (Math.abs(dx) < SNAP_THRESHOLD && Math.abs(dy) < SNAP_THRESHOLD) {
