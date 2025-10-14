@@ -1046,6 +1046,15 @@
                 return;
             }
 
+            // --- MINIMAL FIX START ---
+            // If an element is currently selected, and it is NOT the one being clicked now, deselect it.
+            if (selectedElement && selectedElement !== clickedElement) {
+                selectedElement.classList.remove('selected-component');
+                selectedElement.querySelectorAll('.delete-control, .rotate-control').forEach(el => el.remove());
+                selectedElement = null; // Clear the global tracker
+            }
+            // --- MINIMAL FIX END ---
+
             if (clickedElement) {
                 isDragging = true;
                 draggedElement = clickedElement;
