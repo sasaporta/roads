@@ -938,30 +938,33 @@
                 // Crossroads points are always at the center of the road segments at the edge of the box
                 const halfWidth = unrotatedWidth / 2;
                 const halfHeight = unrotatedHeight / 2;
-                const halfRoadWidth = roadWidth / 2;
                 
                 // Base points relative to wrapper center (0, 0)
                 const basePoints = [
-                    { x: -halfWidth + halfRoadWidth, y: 0 }, // Left
-                    { x: halfWidth - halfRoadWidth, y: 0 },  // Right
-                    { x: 0, y: -halfHeight + halfRoadWidth }, // Top
-                    { x: 0, y: halfHeight - halfRoadWidth }  // Bottom
+                    { x: left, y: top + halfWidth }, // Left
+                    { x: left + unrotatedWidth, y: top + halfWidth },  // Right
+                    { x: left + halfWidth, y: top }, // Top
+                    { x: left + halfWidth, y: top + unrotatedHeight }  // Bottom
                 ];
 
                 basePoints.forEach(point => {
-                    const relX = point.x;
-                    const relY = point.y;
-                    
-                    // Apply rotation matrix
-                    const rotatedRelX = relX * cos - relY * sin;
-                    const rotatedRelY = relX * sin + relY * cos;
-
-                    // Translate back to canvas coordinates
-                    const rotatedX = centerX + rotatedRelX;
-                    const rotatedY = centerY + rotatedRelY;
-                    
-                    points.push({ x: rotatedX, y: rotatedY });
+                    points.push(point);
                 });
+
+//                basePoints.forEach(point => {
+//                    const relX = point.x;
+//                    const relY = point.y;
+//                    
+//                    // Apply rotation matrix
+//                    const rotatedRelX = relX * cos - relY * sin;
+//                    const rotatedRelY = relX * sin + relY * cos;
+//
+//                    // Translate back to canvas coordinates
+//                    const rotatedX = centerX + rotatedRelX;
+//                    const rotatedY = centerY + rotatedRelY;
+//                    
+//                    points.push({ x: rotatedX, y: rotatedY });
+//                });
             }
 
             //console.log('points =', points);
