@@ -1,44 +1,38 @@
 // snap2.cy.js
 
-// Define known component constants and offsets
-const componentType = 'straight-road';
-const lanes = 2;
 const tolerance = 1;
-const SEGMENT_LENGTH = 150; 
-const positionOffset = 75; 
 
-// --- Data-Driven Snap Test Cases (Final, Corrected Values) ---
-const snapCases = [
-    // 1. Horizontal: Snap to the LEFT edge of the base road (Side-by-side alignment)
-    {
-        name: 'Horizontal: Snap to LEFT Edge of Base Road',
-        testOrientation: 'horizontal',
-        dropA_X: 300, 
-        dropA_Y: 300,
-        dropB_X: 452, // Drop target to trigger snap
-        dropB_Y: 300,
-        // Expected CSS 'left' for Road B when snapped side-by-side: 375
-        expectedLeft: 375, 
-        // Expected CSS 'top' for horizontal alignment: 275 
-        expectedTop: 275 
-    },
-    // 2. Vertical: Snap UP to the BOTTOM edge of the base road (End-to-end alignment)
-    {
-        name: 'Vertical Road: Snap UP to Bottom Edge of Base Road',
-        testOrientation: 'vertical',
-        dropA_X: 300, 
-        dropA_Y: 300, // Road A: CSS Top 225, Bottom Edge 375
-        
-        // FIX: Drop point is below Road A's bottom edge (375) to force UP snap.
-        dropB_X: 300,
-        dropB_Y: 452, // Using 452 (similar trigger distance as 452 for horizontal X)
-        
-        // Expected CSS 'left' (horizontal alignment): 225 
-        expectedLeft: 275, 
-        // Expected CSS 'top': Road B's top aligns with Road A's bottom edge (375)
-        expectedTop: 375 
-    },
-];
+const snapCases = [];
+for (const lanes of [2, 4]) {
+    snapCases.push(
+        {
+            name: 'straight, horizontal, snap to right edge',
+            componentType: 'straight-road',
+            orientation: 'horizontal',
+            lanes: lanes,
+            dropA_X: 300, 
+            dropA_Y: 300,
+            dropB_X: 452,
+            dropB_Y: 300,
+            expectedLeft: 375, 
+            expectedTop: lanes == 2 ? 275 : 250 
+        }
+    );
+    snapCases.push(
+        {
+            name: 'straight, vertical, snap to bottom edge',
+            componentType: 'straight-road',
+            orientation: 'vertical',
+            lanes: lanes,
+            dropA_X: 300, 
+            dropA_Y: 300,
+            dropB_X: 300,
+            dropB_Y: 452,
+            expectedLeft: lanes == 2 ? 275: 250,
+            expectedTop: 375 
+        },
+    );
+}
 
 // --- Reusable Verification Function ---
 function verifySnapBehavior(testCase) {
@@ -61,44 +55,42 @@ function verifySnapBehavior(testCase) {
         cy.get('#diagram-canvas').trigger('drop', {
             clientX: clientA_X, 
             clientY: clientA_Y,
-            componentType: componentType,
-            orientation: testCase.testOrientation,
-            lanes: lanes, 
+            componentType: testCase.componentType,
+            orientation: testCase.orientation,
+            lanes: testCase.lanes, 
         });
     });
 
-    // Ensure Road A is created and deselect it
+    // Ensure Road A is created
     cy.get('.component-wrapper')
         .should('have.length', 1)
         .as('roadA');
-    cy.get('#diagram-canvas').click(10, 10); 
 
     // C. DROP ROAD B (The Test Road - expecting snap)
     cy.get('#diagram-canvas').then(() => {
         cy.log(`Drop Road B (${testCase.name}): Internal X: ${testCase.dropB_X}, Y: ${testCase.dropB_Y}`);
-        
         cy.get('#diagram-canvas').trigger('drop', {
             clientX: clientB_X, 
             clientY: clientB_Y,
-            componentType: componentType,
-            orientation: testCase.testOrientation,
-            lanes: lanes, 
+            componentType: testCase.componentType,
+            orientation: testCase.orientation,
+            lanes: testCase.lanes, 
         });
     });
 
-    // D. ASSERT ROAD B's Position (Checking both axes for all cases)
+    // D. ASSERT ROAD B's Position
     cy.get('.component-wrapper')
         .should('have.length', 2)
         .eq(1).as('roadB')
 
-    // 1. Assert LEFT position (Snap check for horizontal, alignment check for vertical)
+    // 1. Assert LEFT position
     cy.get('@roadB')
         .invoke('css', 'left')
         .then(parseFloat)
         .should('be.closeTo', testCase.expectedLeft, tolerance, 
             `Road B failed LEFT check. Expected ${testCase.expectedLeft}.`);
     
-    // 2. Assert TOP position (Snap check for vertical, alignment check for horizontal)
+    // 2. Assert TOP position
     cy.get('@roadB')
         .invoke('css', 'top')
         .then(parseFloat)
@@ -106,11 +98,8 @@ function verifySnapBehavior(testCase) {
             `Road B failed TOP check. Expected ${testCase.expectedTop}.`);
 }
 
-
 // --- Main Test Suite ---
-
 describe('Highway Designer Snap Functionality: Multiple Snap Cases (SNAP ENABLED)', () => {
-    
     beforeEach(() => {
         cy.visit('index.html');
         cy.get('#diagram-canvas', { timeout: 10000 }).should('be.visible'); 
@@ -123,12 +112,8 @@ describe('Highway Designer Snap Functionality: Multiple Snap Cases (SNAP ENABLED
             });
         });
         cy.get('.component-wrapper').should('not.exist');
-        
-        // CRUCIAL: Ensure snap is CHECKED for all these tests
-        cy.get('#snap-checkbox').check().should('be.checked');
     });
 
-    // Loop through the data array to create isolated tests
     snapCases.forEach((testCase) => {
         it(`Should correctly verify snap for: ${testCase.name}`, () => {
             verifySnapBehavior(testCase);
