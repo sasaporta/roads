@@ -1108,6 +1108,7 @@
         });
 
         document.addEventListener('mouseup', (e) => {
+            console.log(isDragging, isRotating, selectedElement);
             if (isDragging && draggedElement) {
                 isDragging = false;
                 
@@ -1122,6 +1123,11 @@
                 selectedElement.appendChild(createRotateControl());
                 
                 draggedElement = null;
+            }
+
+            if (isRotating && selectedElement && snapCheckbox.checked) {
+                const allDroppedComponents = canvas.querySelectorAll('.component-wrapper');
+                snapToElements(selectedElement, allDroppedComponents);
             }
 
             isRotating = false;
