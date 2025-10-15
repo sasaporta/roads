@@ -13,8 +13,22 @@ for (const lanes of [2, 4]) {
             dropA_X: 300, 
             dropA_Y: 300,
             dropB_X: 452,
-            dropB_Y: 300,
+            dropB_Y: 302,
             expectedLeft: 375, 
+            expectedTop: lanes == 2 ? 275 : 250 
+        }
+    );
+    snapCases.push(
+        {
+            name: 'straight, horizontal, snap to left edge',
+            componentType: 'straight-road',
+            orientation: 'horizontal',
+            lanes: lanes,
+            dropA_X: 300, 
+            dropA_Y: 300,
+            dropB_X: 148,
+            dropB_Y: 302,
+            expectedLeft: 75,
             expectedTop: lanes == 2 ? 275 : 250 
         }
     );
@@ -26,10 +40,24 @@ for (const lanes of [2, 4]) {
             lanes: lanes,
             dropA_X: 300, 
             dropA_Y: 300,
-            dropB_X: 300,
+            dropB_X: 302,
             dropB_Y: 452,
             expectedLeft: lanes == 2 ? 275: 250,
             expectedTop: 375 
+        },
+    );
+    snapCases.push(
+        {
+            name: 'straight, vertical, snap to top edge',
+            componentType: 'straight-road',
+            orientation: 'vertical',
+            lanes: lanes,
+            dropA_X: 300, 
+            dropA_Y: 300,
+            dropB_X: 302,
+            dropB_Y: 152,
+            expectedLeft: lanes == 2 ? 275: 250,
+            expectedTop: 75 
         },
     );
 }
