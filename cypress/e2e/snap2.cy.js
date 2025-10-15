@@ -5,6 +5,7 @@ const tolerance = 1;
 const snapCases = [];
 for (const lanes of [2, 4]) {
 
+/*
     snapCases.push(
         {
             name: 'straight, horizontal, snap to right edge',
@@ -167,6 +168,88 @@ for (const lanes of [2, 4]) {
             expectedLeft: 225,
             expectedTop: 75
         },
+    );
+*/
+
+    snapCases.push(
+        {
+            name: 'crossroads, snap to right edge',
+            lanes: lanes,
+            roadA: {
+                componentType: 'crossroads',
+                orientation: '0',
+                dropX: 300, 
+                dropY: 300,
+            },
+            roadB: {
+                componentType: 'straight-road',
+                orientation: 'horizontal',
+                dropX: 452,
+                dropY: 302,
+            },
+            expectedLeft: 375, 
+            expectedTop: lanes == 2 ? 275 : 250 
+        }
+    );
+    snapCases.push(
+        {
+            name: 'crossroads, snap to bottom edge',
+            lanes: lanes,
+            roadA: {
+                componentType: 'crossroads',
+                orientation: '0',
+                dropX: 300, 
+                dropY: 300,
+            },
+            roadB: {
+                componentType: 'straight-road',
+                orientation: 'vertical',
+                dropX: 302,
+                dropY: 452,
+            },
+            expectedLeft: lanes == 2 ? 275 : 250,
+            expectedTop: 375
+        }
+    );
+    snapCases.push(
+        {
+            name: 'crossroads, snap to left edge',
+            lanes: lanes,
+            roadA: {
+                componentType: 'crossroads',
+                orientation: '0',
+                dropX: 300, 
+                dropY: 300,
+            },
+            roadB: {
+                componentType: 'straight-road',
+                orientation: 'horizontal',
+                dropX: 152,
+                dropY: 302,
+            },
+            expectedLeft: 75, 
+            expectedTop: lanes == 2 ? 275 : 250 
+        }
+    );
+    snapCases.push(
+        {
+            name: 'crossroads, snap to top edge',
+            lanes: lanes,
+            roadA: {
+                componentType: 'crossroads',
+                orientation: '0',
+                dropX: 300, 
+                dropY: 300,
+            },
+            roadB: {
+                componentType: 'straight-road',
+                orientation: 'vertical',
+                dropX: 302,
+                dropY: 152,
+            },
+            expectedLeft: lanes == 2 ? 275 : 250,
+            expectedTop: 75
+        }
     );
 }
 
