@@ -967,40 +967,85 @@
 //                });
             }
 
-            //console.log('points =', points);
             return points;
         }
 
+function snapToElements(elementToSnap, allComponents) {
+    angleA = getRotationAngle(elementToSnap);
+    var snapPointsA = getComponentSnapPoints(elementToSnap);
 
-        function snapToElements(movedEl, allElements) {
-            const movedSnapPoints = getComponentSnapPoints(movedEl);
-            console.log('movedSnapPoints =', movedSnapPoints);
+    allComponents.forEach(baseElement => {
+        if (elementToSnap === baseElement) return;
 
-            for (const existingEl of allElements) {
-                if (movedEl === existingEl) continue;
+        const baseElementComponentType = baseElement.dataset.componentType;
+        var angleB = 0;
+        let shouldApplyOrientationSnap = false;
 
-                const existingSnapPoints = getComponentSnapPoints(existingEl);
-                console.log('existingSnapPoints =', existingSnapPoints);
+        angleB = getRotationAngle(baseElement);
 
-                for (let i = 0; i < movedSnapPoints.length; i++) {
-                    const movedPoint = movedSnapPoints[i];
-                    
-                    for (let j = 0; j < existingSnapPoints.length; j++) {
-                        const existingPoint = existingSnapPoints[j];
-
-                        const dx = movedPoint.x - existingPoint.x;
-                        console.log(movedPoint.x, existingPoint.x);
-                        const dy = movedPoint.y - existingPoint.y;
-
-                        if (Math.abs(dx) < SNAP_THRESHOLD && Math.abs(dy) < SNAP_THRESHOLD) {
-                            movedEl.style.left = `${movedEl.offsetLeft - dx}px`;
-                            movedEl.style.top = `${movedEl.offsetTop - dy}px`;
-                            return;
-                        }
-                    }
-                }
-            }
+        var diff = Math.abs(angleA - angleB);
+        // Handle wrap-around difference
+        if (diff > 180) {
+            diff = 360 - diff;
         }
+
+        if (diff <= 5) { 
+            shouldApplyOrientationSnap = true;
+        } else {
+            // If the orientation difference is too large, we skip this base element entirely 
+            // (Requirement 1: Do NOT snap two elements with very different orientations)
+            return;
+        }
+
+        const copyElement = elementToSnap.cloneNode(true);
+        copyElement.setAttribute('data-current-angle', angleB);
+        copyElement.style.transform = `rotate(${angleB}deg)`;
+        copyElement.style.left = elementToSnap.style.left;
+        copyElement.style.top = elementToSnap.style.top;
+        canvas.appendChild(copyElement);
+        snapPointsA = getComponentSnapPoints(copyElement);
+        copyElement.remove();
+
+        const snapPointsB = getComponentSnapPoints(baseElement);
+        let snapped = false; 
+
+        snapPointsA.forEach(pointA => {
+            if (snapped) return; 
+            
+            snapPointsB.forEach(pointB => {
+                if (snapped) return; 
+
+                const distance = Math.sqrt(Math.pow(pointA.x - pointB.x, 2) + Math.pow(pointA.y - pointB.y, 2));
+
+                // Position Snap Check (ALWAYS executed if not skipped by large angle difference)
+                if (distance <= SNAP_THRESHOLD) { 
+                    elementToSnap.style.transform = `rotate(${angleB}deg)`;
+                    elementToSnap.dataset.rotation = angleB;
+
+
+                    snapped = true;
+                    
+                    // --- ORIENTATION SNAP (Only for straight road to straight road) ---
+                    if (shouldApplyOrientationSnap) {
+                        // Adjust the orientation of the snapping element to match the base element (Requirement 2b)
+                        elementToSnap.style.transform = `rotate(${angleB}deg)`;
+                        elementToSnap.dataset.rotation = angleB;
+                    }
+                    // -----------------------------------------------------------------
+                    
+                    // --- Position Snap ---
+                    const deltaX = pointB.x - pointA.x;
+                    const deltaY = pointB.y - pointA.y;
+
+                    elementToSnap.style.left = (elementToSnap.offsetLeft + deltaX) + 'px';
+                    elementToSnap.style.top = (elementToSnap.offsetTop + deltaY) + 'px';
+                    
+                    return; 
+                }
+            });
+        });
+    });
+}
 
         function createDeleteControl() {
             const deleteControl = document.createElement('div');
@@ -1108,7 +1153,6 @@
         });
 
         document.addEventListener('mouseup', (e) => {
-            console.log(isDragging, isRotating, selectedElement);
             if (isDragging && draggedElement) {
                 isDragging = false;
                 
